@@ -23,8 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-frontend_new/*
-
 # Backend (Rust)
 backend/target/
 **/*.rs.bk
