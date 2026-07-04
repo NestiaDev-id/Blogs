@@ -9,5 +9,5 @@ path = "api/hello.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-vercel_runtime = { version = "2" }
+vercel_runtime = { version = "2.4", features = ["axum"] }
 serde_json = "1.0"
