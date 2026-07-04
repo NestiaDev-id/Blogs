@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "main"
-path = "api/index.rs"
+name = "hello"
+path = "api/hello.rs"
 
 [dependencies]
-tokio = { version = "1", features = ["macros"] }
-vercel_runtime = "1.1.1"
+tokio = { version = "1", features = ["full"] }
+vercel_runtime = { version = "2" }
 serde_json = "1.0"
