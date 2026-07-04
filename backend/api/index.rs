@@ -7,15 +7,15 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(_req: Request) -> Result<Response<Body>, Error> {
+    let response_body = json!({
+        "message": "Welcome to Lentera Novel API!",
+        "status": "online"
+    })
+    .to_string();
+
     Ok(Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
-        .body(
-            json!({
-                "message": "Welcome to Lentera Novel API!",
-                "status": "online"
-            })
-            .to_string()
-            .into(),
-        )?)
+        .header("Access-Control-Allow-Origin", "*")
+        .body(Body::from(response_body))?)
 }
