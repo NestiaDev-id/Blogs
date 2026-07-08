@@ -1,34 +1,17 @@
 import type { Context } from "hono";
-import prisma from "../config/database.js";
+import { Series } from "../models/index.js";
 
 // GET /api/series - Daftar semua seri
 export const getAllSeries = async (c: Context) => {
-  const series = await prisma.series.findMany({
-    include: {
-      author: { select: { id: true, name: true, avatar: true } },
-      _count: { select: { posts: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
-
+  const series = await Series.find().populate("authorId", "name avatar").sort({ updatedAt: -1 });
   return c.json({ status: "success", data: series });
 };
 
-// GET /api/series/:slug - Detail seri beserta daftar post (chapter)
+// GET /api/series/:slug - Detail seri (bisa dipopulate dengan post nanti di resolver terpisah jika butuh kompleksitas)
 export const getSeriesBySlug = async (c: Context) => {
   const slug = c.req.param("slug");
 
-  const series = await prisma.series.findUnique({
-    where: { slug },
-    include: {
-      author: { select: { id: true, name: true, avatar: true } },
-      posts: {
-        where: { status: "PUBLISHED" },
-        orderBy: { order: "asc" },
-        select: { id: true, title: true, slug: true, order: true, createdAt: true },
-      },
-    },
-  });
+  const series = await Series.findOne({ slug }).populate("authorId", "name avatar");
 
   if (!series) {
     return c.json({ status: "error", message: "Seri tidak ditemukan" }, 404);
@@ -46,22 +29,17 @@ export const createSeries = async (c: Context) => {
     return c.json({ status: "error", message: "Judul seri wajib diisi" }, 400);
   }
 
-  // Generate slug dari title
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
+  // Generate slug
+  const slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
 
   // Pastikan slug unik
-  const existing = await prisma.series.findUnique({ where: { slug } });
+  const existing = await Series.findOne({ slug });
   if (existing) {
     return c.json({ status: "error", message: "Judul sudah digunakan, coba judul lain" }, 409);
   }
 
-  const series = await prisma.series.create({
-    data: { title, slug, description, coverImage, status, authorId: userId },
+  const series = await Series.create({
+    title, slug, description, coverImage, status, authorId: userId
   });
 
   return c.json({ status: "success", data: series }, 201);

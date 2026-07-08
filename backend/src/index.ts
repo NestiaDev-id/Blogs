@@ -15,6 +15,9 @@ app.use("*", cors());
 // Root
 app.get("/", (c) => c.redirect("/api"));
 
+import connectDB from "./config/database.js";
+connectDB(); // Hubungkan ke Mongoose saat server start
+
 // Root API
 app.get("/api", (c) =>
   c.json({

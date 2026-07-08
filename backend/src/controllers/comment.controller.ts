@@ -1,17 +1,13 @@
 import type { Context } from "hono";
-import prisma from "../config/database.js";
+import { Comment, Post } from "../models/index.js";
 
 // GET /api/posts/:postId/comments - Lihat komentar di suatu tulisan
 export const getComments = async (c: Context) => {
   const postId = c.req.param("postId");
 
-  const comments = await prisma.comment.findMany({
-    where: { postId },
-    include: {
-      user: { select: { id: true, name: true, avatar: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const comments = await Comment.find({ postId })
+    .populate("userId", "name avatar")
+    .sort({ createdAt: -1 });
 
   return c.json({ status: "success", data: comments });
 };
@@ -27,17 +23,13 @@ export const createComment = async (c: Context) => {
   }
 
   // Pastikan post ada
-  const post = await prisma.post.findUnique({ where: { id: postId } });
+  const post = await Post.findById(postId);
   if (!post) {
     return c.json({ status: "error", message: "Tulisan tidak ditemukan" }, 404);
   }
 
-  const comment = await prisma.comment.create({
-    data: { content: content.trim(), postId, userId },
-    include: {
-      user: { select: { id: true, name: true, avatar: true } },
-    },
-  });
+  const comment = await Comment.create({ content: content.trim(), postId, userId });
+  await comment.populate("userId", "name avatar");
 
   return c.json({ status: "success", data: comment }, 201);
 };

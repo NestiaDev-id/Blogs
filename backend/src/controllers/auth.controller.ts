@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import prisma from "../config/database.js";
+import { User } from "../models/index.js";
 import { env } from "../config/env.js";
 
 // POST /api/auth/register
@@ -13,19 +13,19 @@ export const register = async (c: Context) => {
   }
 
   // Cek apakah email sudah terdaftar
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await User.findOne({ email });
   if (existing) {
     return c.json({ status: "error", message: "Email sudah terdaftar" }, 409);
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const user = await prisma.user.create({
-    data: { email, password: hashedPassword, name },
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
-  });
+  const user = await User.create({ email, password: hashedPassword, name });
 
-  return c.json({ status: "success", data: user }, 201);
+  return c.json({ 
+    status: "success", 
+    data: { id: user._id, email: user.email, name: user.name, role: user.role, createdAt: user.createdAt } 
+  }, 201);
 };
 
 // POST /api/auth/login
@@ -36,7 +36,7 @@ export const login = async (c: Context) => {
     return c.json({ status: "error", message: "Email dan password wajib diisi" }, 400);
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await User.findOne({ email });
   if (!user) {
     return c.json({ status: "error", message: "Email atau password salah" }, 401);
   }
@@ -46,25 +46,22 @@ export const login = async (c: Context) => {
     return c.json({ status: "error", message: "Email atau password salah" }, 401);
   }
 
-  const token = jwt.sign({ id: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign({ id: user._id, role: user.role }, env.JWT_SECRET, { expiresIn: "7d" });
 
   return c.json({
     status: "success",
     data: {
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user._id, email: user.email, name: user.name, role: user.role },
     },
   });
 };
 
-// GET /api/auth/me - Ambil profil user yang sedang login
+// GET /api/auth/me
 export const getMe = async (c: Context) => {
   const userId = c.get("userId");
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, name: true, avatar: true, bio: true, role: true, createdAt: true },
-  });
+  const user = await User.findById(userId).select("-password");
 
   if (!user) {
     return c.json({ status: "error", message: "User tidak ditemukan" }, 404);
