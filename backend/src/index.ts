@@ -1,23 +1,55 @@
-import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 
-const app = new Hono()
+// Routes
+import authRoute from "./routes/auth.route.js";
+import seriesRoute from "./routes/series.route.js";
+import postRoute from "./routes/post.route.js";
 
-app.get('/', (c) => c.redirect('/api'))
+const app = new Hono();
+
+// Middleware global
+app.use("*", cors());
+
+// Root
+app.get("/", (c) => c.redirect("/api"));
 
 // Root API
-app.get('/api', (c) => c.json({ 
-  message: "Welcome to Lentera Blog API",
-  version: "1.0.0"
-}))
+app.get("/api", (c) =>
+  c.json({
+    message: "Welcome to Lentera Blog API",
+    version: "1.0.0",
+    endpoints: {
+      auth: "/api/auth",
+      series: "/api/series",
+      posts: "/api/posts",
+    },
+  })
+);
+
+// Mount routes
+app.route("/api/auth", authRoute);
+app.route("/api/series", seriesRoute);
+app.route("/api/posts", postRoute);
 
 // Error Handler
-app.onError((err, c) => c.json({ status: "error", message: err.message }, 500));
+app.onError((err, c) =>
+  c.json({ status: "error", message: err.message }, 500)
+);
 
-// error 404 handler
-app.notFound((c) => c.json({ status: "error", message: "Not Found" }, 404));
+// 404 handler
+app.notFound((c) =>
+  c.json({ status: "error", message: "Not Found" }, 404)
+);
 
 const port = 3000;
-console.log(`Server running on http://localhost:${port}`);
 
-serve({ fetch: app.fetch, port });
+// Export app untuk Vercel Serverless Function
+export default app;
+
+// Jalankan server lokal HANYA jika bukan di environment Vercel/Production
+if (process.env.NODE_ENV !== "production") {
+  console.log(`🚀 Server running on http://localhost:${port}`);
+  serve({ fetch: app.fetch, port });
+}
